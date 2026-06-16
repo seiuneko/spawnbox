@@ -1,0 +1,14 @@
+[project]
+name = "spawnbox"
+version = "0.1.0"
+description = "systemd-nspawn wrapper optimized for LLM coding agents"
+requires-python = ">=3.11"
+authors = [{name = "seiuneko"}]
+license = "AGPL-3.0-or-later"
+
+[project.scripts]
+spawnbox = "spawnbox.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.21,<0.12"]
+build-backend = "uv_build"
