@@ -11,8 +11,7 @@ from pathlib import Path
 
 from spawnbox.config import Config
 from spawnbox.resolver import (
-    expand_bind,
-    expand_bind_read_only,
+    expand_bind_path,
     get_host_user,
     resolve_unit,
 )
@@ -41,9 +40,8 @@ def write_nspawn_file(config: Config, project_dir: str | None = None, verbose: i
 
     user, home = get_host_user()
 
-    lines: list[str] = []
+    lines: list[str] = ["[Exec]"]
 
-    lines.append("[Exec]")
     if config.exec_conf.boot:
         lines.append("Boot=yes")
     if config.exec_conf.ephemeral:
@@ -64,11 +62,11 @@ def write_nspawn_file(config: Config, project_dir: str | None = None, verbose: i
         lines.append(f"Inaccessible={resolved}")
 
     for bro in config.bind_read_only.paths:
-        processed = expand_bind_read_only(bro)
+        processed = expand_bind_path(bro)
         lines.append(f"BindReadOnly={processed}")
 
     for b in config.bind.paths:
-        processed = expand_bind(b)
+        processed = expand_bind_path(b)
         lines.append(f"Bind={processed}")
 
     if project_dir:
@@ -142,11 +140,26 @@ def wait_for_container(machine: str, timeout: int = 90) -> bool:
     return False
 
 
-def run_in_container(machine: str, command: list[str] | None) -> int:
+def run_in_container(
+    machine: str,
+    command: list[str] | None,
+    working_dir: str | None = None,
+) -> int:
     user = get_host_user()[0]
-    cmd = ["sudo", "machinectl", "shell", f"--uid={user}", machine]
-    if command:
-        cmd += command
+    if not command:
+        command = ["/bin/sh"]
+    cmd = [
+        "sudo", "systemd-run",
+        "--machine", machine,
+        "--uid", user,
+        "--wait",
+        "--pty",
+        "--collect",
+        "--quiet",
+    ]
+    if working_dir:
+        cmd += ["--working-directory", working_dir]
+    cmd += command
     return subprocess.run(cmd).returncode
 
 
@@ -181,6 +194,7 @@ def run_container(
     config: Config,
     machine: str,
     command: list[str] | None = None,
+    working_dir: str | None = None,
     dry_run: bool = False,
     verbose: int = 0,
 ) -> int:
@@ -196,7 +210,12 @@ def run_container(
         print()
         print(f"sudo systemctl start systemd-nspawn@{machine}.service")
         if command:
-            print(f"sudo machinectl shell --uid={get_host_user()[0]} {machine} {' '.join(shlex.quote(c) for c in command)}")
+            cmd_str = " ".join(shlex.quote(c) for c in command)
+            wd = f" --working-directory={working_dir}" if working_dir else ""
+            print(f"sudo systemd-run --machine={machine} --uid={get_host_user()[0]} --wait --pty --collect --quiet{wd} {cmd_str}")
+        else:
+            wd = f" --working-directory={working_dir}" if working_dir else ""
+            print(f"sudo systemd-run --machine={machine} --uid={get_host_user()[0]} --wait --pty --collect --quiet{wd} /bin/sh")
         return 0
 
     try:
@@ -214,7 +233,7 @@ def run_container(
 
         if verbose >= 1:
             print(f"running command ...", flush=True)
-        ret = run_in_container(machine, command)
+        ret = run_in_container(machine, command, working_dir)
 
         if verbose >= 1:
             print(f"stopping container ...", flush=True)

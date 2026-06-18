@@ -29,7 +29,7 @@ def resolve_unit(name: str) -> str:
     )
 
 
-def expand_bind_read_only(raw: str) -> str:
+def expand_bind_path(raw: str) -> str:
     if ":" in raw:
         source, dest = raw.split(":", 1)
     else:
@@ -37,12 +37,3 @@ def expand_bind_read_only(raw: str) -> str:
     source = str(Path(source).expanduser())
     dest = str(Path(dest).expanduser())
     return f"{source}:{dest}:idmap"
-
-
-def expand_bind(raw: str) -> str:
-    if ":" in raw:
-        source, dest = raw.split(":", 1)
-        source = str(Path(source).expanduser())
-        dest = str(Path(dest).expanduser())
-        return f"{source}:{dest}"
-    return str(Path(raw).expanduser())
