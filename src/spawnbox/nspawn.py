@@ -17,7 +17,6 @@ from spawnbox.resolver import (
 )
 
 NSPAWN_DIR = Path("/run/systemd/nspawn")
-MACHINES_DIR = Path("/var/lib/machines")
 
 
 def _sudo_write(path: Path, content: str) -> None:
@@ -92,22 +91,32 @@ def write_nspawn_file(config: Config, project_dir: str | None = None, verbose: i
     return machine, nspawn_path
 
 
-def create_machine_symlink(machine: str, directory: str) -> Path:
-    symlink_path = MACHINES_DIR / machine
-    subprocess.run(["sudo", "mkdir", "-p", str(MACHINES_DIR)], check=True)
-    subprocess.run(
-        ["sudo", "ln", "-sfn", str(Path(directory).resolve()), str(symlink_path)],
-        check=True,
-    )
-    atexit.register(lambda: _sudo_rm(symlink_path))
-    return symlink_path
-
-
 # ---- lifecycle -------------------------------------------------------------
 
-def start_container(machine: str) -> None:
+def start_container(machine: str, directory: str) -> None:
     subprocess.run(
-        ["sudo", "systemctl", "start", f"systemd-nspawn@{machine}.service"],
+        [
+            "sudo", "systemd-run",
+            "--unit", machine,
+            "--property=Delegate=yes",
+            "--property=DelegateSubgroup=supervisor",
+            "--property=TasksMax=16384",
+            "--property=DevicePolicy=closed",
+            "--property=DeviceAllow=/dev/net/tun rwm",
+            "--property=DeviceAllow=char-pts rw",
+            "--property=DeviceAllow=/dev/fuse rwm",
+            "--property=DeviceAllow=/dev/loop-control rw",
+            "--property=DeviceAllow=block-loop rw",
+            "--property=DeviceAllow=block-blkext rw",
+            "--property=DeviceAllow=/dev/mapper/control rw",
+            "--property=DeviceAllow=block-device-mapper rw",
+            "--quiet",
+            "--collect",
+            "systemd-nspawn",
+            "--quiet", "--boot",
+            f"--directory={directory}",
+            f"--machine={machine}",
+        ],
         check=True,
     )
 
@@ -165,7 +174,11 @@ def run_in_container(
 
 def stop_container(machine: str) -> None:
     subprocess.run(
-        ["sudo", "systemctl", "stop", f"systemd-nspawn@{machine}.service"],
+        ["sudo", "systemctl", "stop", f"{machine}.service"],
+        capture_output=True,
+    )
+    subprocess.run(
+        ["sudo", "systemd-nspawn", "--cleanup", f"--machine={machine}"],
         capture_output=True,
     )
 
@@ -201,14 +214,13 @@ def run_container(
     if command is None:
         command = [config.default_command] if config.default_command else []
 
-    machine_symlink = create_machine_symlink(machine, config.directory)
-
     if dry_run:
         print(f"# machine: {machine}")
         print(f"# .nspawn: /run/systemd/nspawn/{machine}.nspawn")
-        print(f"# symlink: {machine_symlink} -> {config.directory}")
         print()
-        print(f"sudo systemctl start systemd-nspawn@{machine}.service")
+        print(f"sudo systemd-run --unit={machine} --property=Delegate=yes --property=DelegateSubgroup=supervisor --property=TasksMax=16384 --property=DevicePolicy=closed --property='DeviceAllow=/dev/net/tun rwm' --property='DeviceAllow=char-pts rw' --property='DeviceAllow=/dev/fuse rwm' --property='DeviceAllow=/dev/loop-control rw' --property='DeviceAllow=block-loop rw' --property='DeviceAllow=block-blkext rw' --property='DeviceAllow=/dev/mapper/control rw' --property='DeviceAllow=block-device-mapper rw' --quiet --collect systemd-nspawn --quiet --boot --directory={config.directory} --machine={machine}")
+        print(f"sudo systemctl stop {machine}.service")
+        print(f"sudo systemd-nspawn --cleanup --machine={machine}")
         if command:
             cmd_str = " ".join(shlex.quote(c) for c in command)
             wd = f" --working-directory={working_dir}" if working_dir else ""
@@ -223,7 +235,7 @@ def run_container(
 
         if verbose >= 1:
             print(f"starting container {machine} ...", flush=True)
-        start_container(machine)
+        start_container(machine, config.directory)
 
         if verbose >= 1:
             print(f"waiting for boot ...", flush=True)
