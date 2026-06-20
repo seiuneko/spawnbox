@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 from spawnbox.config import load_config
-from spawnbox.nspawn import run_container, write_nspawn_file
 from spawnbox.resolver import get_host_user
+from spawnbox.runner import Runner
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -37,35 +37,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main() -> int:
+    from spawnbox import setup_logging
+
     args = parse_args()
+    setup_logging(args.verbose)
 
     config = load_config(args.config)
+    user, home = get_host_user()
+    project_dir = str(Path.cwd())
 
-    if args.verbose >= 1:
-        print(f"[spawnbox] machine={config.machine}, directory={config.directory}", file=sys.stderr)
-
-    command = args.command or ([config.default_command] if config.default_command else [])
-
-    _user, home = get_host_user()
-    if project_dir := str(Path.cwd()):
-        workspace_name = Path(project_dir).name
-        workspace_dir = f"{home}/workspace/{workspace_name}"
-    else:
-        workspace_dir = None
-
-    machine, _nspawn_path = write_nspawn_file(config, project_dir, verbose=args.verbose)
-
-    if args.verbose >= 1:
-        print(f"[spawnbox] machine name: {machine}", file=sys.stderr)
-        if workspace_dir:
-            print(f"[spawnbox] working directory: {workspace_dir}", file=sys.stderr)
-
-    return run_container(
-        config, machine, command,
-        working_dir=workspace_dir,
-        dry_run=args.dry_run,
-        verbose=args.verbose,
+    command = args.command or (
+        [config.default_command] if config.default_command else []
     )
+
+    runner = Runner(config, dry_run=args.dry_run)
+    runner.setup(project_dir, user, home)
+
+    workspace_name = Path(project_dir).name
+    workspace_dir = f"{home}/workspace/{workspace_name}"
+
+    return runner.run(command, workspace_dir)
 
 
 if __name__ == "__main__":
