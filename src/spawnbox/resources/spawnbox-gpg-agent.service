@@ -1,0 +1,13 @@
+[Unit]
+Description=Link host GnuPG agent socket in spawnbox
+ConditionVirtualization=container
+
+After=gpg-agent.socket
+
+[Service]
+Type=oneshot
+ExecStart=/bin/ln -sf %h/.gnupg/S.gpg-agent.host /run/user/1000/gnupg/S.gpg-agent
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

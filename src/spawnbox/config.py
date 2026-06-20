@@ -39,6 +39,11 @@ class BindConfig:
 
 
 @dataclass
+class GpgConfig:
+    enabled: bool = False
+
+
+@dataclass
 class Config:
     machine: str = "spawnbox"
     directory: str = "/run/btrfs-root/pc711/@"
@@ -48,6 +53,7 @@ class Config:
     inaccessible: InaccessibleConfig = field(default_factory=InaccessibleConfig)
     bind_read_only: BindReadOnlyConfig = field(default_factory=BindReadOnlyConfig)
     bind: BindConfig = field(default_factory=BindConfig)
+    gpg: GpgConfig = field(default_factory=GpgConfig)
 
 
 def load_config(path: str | None = None) -> Config:
@@ -102,5 +108,9 @@ def _parse_config(raw: dict) -> Config:
 
     if "bind" in raw:
         cfg.bind.paths = raw["bind"].get("paths", [])
+
+    if "gpg" in raw:
+        g = raw["gpg"]
+        cfg.gpg.enabled = g.get("enabled", cfg.gpg.enabled)
 
     return cfg

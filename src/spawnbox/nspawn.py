@@ -18,6 +18,9 @@ from spawnbox.resolver import (
 
 NSPAWN_DIR = Path("/run/systemd/nspawn")
 
+_SERVICE_DIR = Path(__file__).parent / "resources"
+SERVICE_FILE = str(_SERVICE_DIR / "spawnbox-gpg-agent.service")
+
 
 def _sudo_write(path: Path, content: str) -> None:
     subprocess.run(
@@ -73,6 +76,36 @@ def write_nspawn_file(config: Config, project_dir: str | None = None, verbose: i
         workspace_name = Path(host_dir).name
         container_dir = f"{home}/workspace/{workspace_name}"
         lines.append(f"Bind={host_dir}:{container_dir}:idmap")
+
+    if config.gpg.enabled:
+        result = subprocess.run(
+            ["gpgconf", "--list-dir", "agent-extra-socket"],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                "gpgconf not found; install gnupg or disable [gpg] in config"
+            )
+        host_extra_socket = result.stdout.strip()
+        if not host_extra_socket:
+            raise RuntimeError(
+                "gpgconf --list-dir agent-extra-socket returned empty; "
+                "is gpg-agent running?"
+            )
+
+        processed = expand_bind_path(
+            f"{host_extra_socket}:~/.gnupg/S.gpg-agent.host"
+        )
+        lines.append(f"Bind={processed}")
+
+        for path in ["~/.config/git", "~/.gnupg/pubring.kbx"]:
+            processed = expand_bind_path(path)
+            lines.append(f"BindReadOnly={processed}")
+
+        processed = expand_bind_path(
+            f"{SERVICE_FILE}:/usr/lib/systemd/user/spawnbox-gpg-agent.service"
+        )
+        lines.append(f"BindReadOnly={processed}")
 
     lines.append("")
 
@@ -242,6 +275,20 @@ def run_container(
         if not wait_for_container(machine):
             print(f"error: container {machine} failed to start", file=sys.stderr)
             return 1
+
+        if config.gpg.enabled:
+            if verbose >= 1:
+                print(f"enabling GPG agent forwarding ...", flush=True)
+
+            subprocess.run(
+                [
+                    "sudo", "systemd-run",
+                    "--machine", machine,
+                    "--wait", "--collect", "--quiet",
+                    "systemctl", "--global", "enable", "spawnbox-gpg-agent.service",
+                ],
+                check=True,
+            )
 
         if verbose >= 1:
             print(f"running command ...", flush=True)
