@@ -11,18 +11,6 @@ DEFAULT_CONFIG_PATH = XDG_CONFIG_DIR / "spawnbox.toml"
 
 
 @dataclass
-class ExecConfig:
-    boot: bool = True
-    ephemeral: bool = True
-    private_users: str = "pick"
-
-
-@dataclass
-class FilesConfig:
-    private_users_ownership: str = "auto"
-
-
-@dataclass
 class InaccessibleConfig:
     paths: list[str] = field(default_factory=list)
     units: list[str] = field(default_factory=list)
@@ -48,8 +36,6 @@ class Config:
     machine: str = "spawnbox"
     directory: str = "/run/btrfs-root/pc711/@"
     default_command: str = "/usr/bin/opencode"
-    exec_conf: ExecConfig = field(default_factory=ExecConfig)
-    files_conf: FilesConfig = field(default_factory=FilesConfig)
     inaccessible: InaccessibleConfig = field(default_factory=InaccessibleConfig)
     bind_read_only: BindReadOnlyConfig = field(default_factory=BindReadOnlyConfig)
     bind: BindConfig = field(default_factory=BindConfig)
@@ -87,8 +73,6 @@ def _parse_config(raw: dict) -> Config:
             setattr(cfg, key, raw[key])
 
     sections: dict[str, tuple[object, tuple[str, ...]]] = {
-        "exec":             (cfg.exec_conf,     ("boot", "ephemeral", "private_users")),
-        "files":            (cfg.files_conf,    ("private_users_ownership",)),
         "inaccessible":     (cfg.inaccessible,  ("paths", "units")),
         "bind_read_only":   (cfg.bind_read_only, ("paths",)),
         "bind":             (cfg.bind,          ("paths",)),

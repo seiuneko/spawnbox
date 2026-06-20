@@ -23,25 +23,17 @@ def _sudo_rm(path: Path) -> None:
     subprocess.run(["sudo", "rm", "-f", str(path)], capture_output=True)
 
 
-def _build_exec_section(config: Config) -> list[str]:
-    lines: list[str] = ["[Exec]"]
-    if config.exec_conf.boot:
-        lines.append("Boot=yes")
-    if config.exec_conf.ephemeral:
-        lines.append("Ephemeral=yes")
-    if config.exec_conf.private_users:
-        lines.append(f"PrivateUsers={config.exec_conf.private_users}")
-    lines.append("")
-    return lines
-
-
-def _build_files_section(config: Config) -> list[str]:
-    lines: list[str] = ["[Files]"]
-    if config.files_conf.private_users_ownership:
-        lines.append(
-            f"PrivateUsersOwnership={config.files_conf.private_users_ownership}"
-        )
-    return lines
+def _build_profile_section() -> list[str]:
+    """硬编码的容器运行时配置：[Exec] + [Files] 两个 section。"""
+    return [
+        "[Exec]",
+        "Boot=yes",
+        "Ephemeral=yes",
+        "PrivateUsers=pick",
+        "",
+        "[Files]",
+        "PrivateUsersOwnership=auto",
+    ]
 
 
 def _build_inaccessible_section(config: Config) -> list[str]:
@@ -119,8 +111,7 @@ def build_nspawn_content(
 ) -> str:
     """生成 .nspawn 文件内容。纯函数，无副作用。"""
     lines: list[str] = []
-    lines += _build_exec_section(config)
-    lines += _build_files_section(config)
+    lines += _build_profile_section()
     lines += _build_inaccessible_section(config)
     lines += _build_bind_read_only_section(config)
     lines += _build_bind_section(config)
