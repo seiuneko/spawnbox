@@ -109,7 +109,7 @@ class Runner:
         command: list[str],
         working_dir: str | None,
     ) -> int:
-        user = get_host_user()[0]
+        user = get_host_user(self._config.target_user or None)[0]
         self._logger.info("running command ...")
         return run_in_container(
             self._machine,

@@ -12,16 +12,6 @@ _SERVICE_DIR = Path(__file__).parent / "resources"
 SERVICE_FILE = str(_SERVICE_DIR / "spawnbox-gpg-agent.service")
 
 
-def _sudo_write(path: Path, content: str) -> None:
-    subprocess.run(
-        ["sudo", "tee", str(path)],
-        input=content, text=True, capture_output=True, check=True,
-    )
-
-
-def _sudo_rm(path: Path) -> None:
-    subprocess.run(["sudo", "rm", "-f", str(path)], capture_output=True)
-
 
 def _build_profile_section() -> list[str]:
     """硬编码的容器运行时配置：[Exec] + [Files] 两个 section。"""
@@ -128,13 +118,13 @@ def write_nspawn_file(machine: str, content: str, *, dry_run: bool = False) -> P
     nspawn_path = NSPAWN_DIR / f"{machine}.nspawn"
     if dry_run:
         return nspawn_path
-    subprocess.run(["sudo", "mkdir", "-p", str(NSPAWN_DIR)], check=True)
-    _sudo_write(nspawn_path, content)
-    subprocess.run(["sudo", "chmod", "644", str(nspawn_path)], check=True)
+    NSPAWN_DIR.mkdir(parents=True, exist_ok=True)
+    nspawn_path.write_text(content)
+    nspawn_path.chmod(0o644)
     atexit.register(lambda: cleanup_nspawn_file(nspawn_path))
     return nspawn_path
 
 
 def cleanup_nspawn_file(nspawn_path: Path) -> None:
     """删除 .nspawn 文件。"""
-    _sudo_rm(nspawn_path)
+    nspawn_path.unlink(missing_ok=True)

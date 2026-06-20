@@ -36,6 +36,7 @@ class Config:
     machine: str = "spawnbox"
     directory: str = "/run/btrfs-root/pc711/@"
     default_command: str = "/usr/bin/opencode"
+    target_user: str = ""
     inaccessible: InaccessibleConfig = field(default_factory=InaccessibleConfig)
     bind_read_only: BindReadOnlyConfig = field(default_factory=BindReadOnlyConfig)
     bind: BindConfig = field(default_factory=BindConfig)
@@ -68,7 +69,7 @@ def load_config(path: str | None = None) -> Config:
 def _parse_config(raw: dict) -> Config:
     cfg = Config()
 
-    for key in ("machine", "directory", "default_command"):
+    for key in ("machine", "directory", "default_command", "target_user"):
         if key in raw:
             setattr(cfg, key, raw[key])
 

@@ -36,7 +36,7 @@ def start_container(
     properties = [f"--property={p}" for p in SYSTEMD_PROPERTIES]
     run_systemd(
         [
-            "sudo", "systemd-run",
+            "systemd-run",
             "--unit", machine,
             *properties,
             "--quiet", "--collect",
@@ -57,12 +57,12 @@ def stop_container(
 ) -> None:
     """Stop and clean up a systemd-nspawn container."""
     run_systemd(
-        ["sudo", "systemctl", "stop", f"{machine}.service"],
+        ["systemctl", "stop", f"{machine}.service"],
         dry_run=dry_run,
         capture_output=True,
     )
     run_systemd(
-        ["sudo", "systemd-nspawn", "--cleanup", f"--machine={machine}"],
+        ["systemd-nspawn", "--cleanup", f"--machine={machine}"],
         dry_run=dry_run,
         capture_output=True,
     )
@@ -80,7 +80,7 @@ def wait_for_container(
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         state = subprocess.run(
-            ["sudo", "machinectl", "show", machine],
+            ["machinectl", "show", machine],
             capture_output=True, text=True,
         )
         if state.returncode != 0 or "State=running" not in state.stdout:
@@ -88,7 +88,7 @@ def wait_for_container(
             continue
         try:
             probe = subprocess.run(
-                ["sudo", "systemd-run", "--machine", machine,
+                ["systemd-run", "--machine", machine,
                  "--uid=root", "--collect", "--quiet", "--wait",
                  "/bin/true"],
                 capture_output=True, timeout=BOOT_PROBE_TIMEOUT,
@@ -112,7 +112,7 @@ def run_in_container(
 ) -> int:
     """Run a command inside the container as the given user."""
     cmd = [
-        "sudo", "systemd-run",
+        "systemd-run",
         "--machine", f"{user}@{machine}",
         "--user",
         "--wait",
@@ -134,7 +134,7 @@ def enable_gpg_agent(
     """Enable the GPG agent forwarding service inside the container."""
     run_systemd(
         [
-            "sudo", "systemd-run",
+            "systemd-run",
             "--machine", machine,
             "--wait", "--collect", "--quiet",
             "systemctl", "--global", "enable", "spawnbox-gpg-agent.service",
