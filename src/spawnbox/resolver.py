@@ -31,11 +31,21 @@ def resolve_unit(name: str) -> str:
     )
 
 
-def expand_bind_path(raw: str) -> str:
+def expand_bind_path(raw: str, host_home: str = "") -> str:
     if ":" in raw:
         source, dest = raw.split(":", 1)
     else:
         source = dest = raw
-    source = str(Path(source).expanduser())
-    dest = str(Path(dest).expanduser())
+    if host_home:
+        if source.startswith("~/"):
+            source = host_home + source[1:]
+        elif source == "~":
+            source = host_home
+        if dest.startswith("~/"):
+            dest = host_home + dest[1:]
+        elif dest == "~":
+            dest = host_home
+    else:
+        source = str(Path(source).expanduser())
+        dest = str(Path(dest).expanduser())
     return f"{source}:{dest}:idmap"

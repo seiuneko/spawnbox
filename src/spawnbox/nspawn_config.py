@@ -36,18 +36,18 @@ def _build_inaccessible_section(config: Config) -> list[str]:
     return lines
 
 
-def _build_bind_read_only_section(config: Config) -> list[str]:
+def _build_bind_read_only_section(config: Config, host_home: str = "") -> list[str]:
     lines: list[str] = []
     for bro in config.bind_read_only.paths:
-        processed = expand_bind_path(bro)
+        processed = expand_bind_path(bro, host_home=host_home)
         lines.append(f"BindReadOnly={processed}")
     return lines
 
 
-def _build_bind_section(config: Config) -> list[str]:
+def _build_bind_section(config: Config, host_home: str = "") -> list[str]:
     lines: list[str] = []
     for b in config.bind.paths:
-        processed = expand_bind_path(b)
+        processed = expand_bind_path(b, host_home=host_home)
         lines.append(f"Bind={processed}")
     return lines
 
@@ -77,16 +77,18 @@ def _build_gpg_section(config: Config, host_home: str) -> list[str]:
         )
 
     processed = expand_bind_path(
-        f"{host_extra_socket}:~/.gnupg/S.gpg-agent.host"
+        f"{host_extra_socket}:~/.gnupg/S.gpg-agent.host",
+        host_home=host_home,
     )
     lines.append(f"Bind={processed}")
 
     for path in ["~/.config/git", "~/.gnupg/pubring.kbx"]:
-        processed = expand_bind_path(path)
+        processed = expand_bind_path(path, host_home=host_home)
         lines.append(f"BindReadOnly={processed}")
 
     processed = expand_bind_path(
-        f"{SERVICE_FILE}:/usr/lib/systemd/user/spawnbox-gpg-agent.service"
+        f"{SERVICE_FILE}:/usr/lib/systemd/user/spawnbox-gpg-agent.service",
+        host_home=host_home,
     )
     lines.append(f"BindReadOnly={processed}")
 
@@ -103,8 +105,8 @@ def build_nspawn_content(
     lines: list[str] = []
     lines += _build_profile_section()
     lines += _build_inaccessible_section(config)
-    lines += _build_bind_read_only_section(config)
-    lines += _build_bind_section(config)
+    lines += _build_bind_read_only_section(config, host_home=host_home)
+    lines += _build_bind_section(config, host_home=host_home)
     if project_dir:
         lines += _build_project_bind(project_dir, host_home)
     if config.gpg.enabled:

@@ -6,10 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-XDG_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "spawnbox"
-DEFAULT_CONFIG_PATH = XDG_CONFIG_DIR / "spawnbox.toml"
-
-
 @dataclass
 class InaccessibleConfig:
     paths: list[str] = field(default_factory=list)
@@ -42,7 +38,7 @@ class Config:
     gpg: GpgConfig = field(default_factory=GpgConfig)
 
 
-def load_config(path: str | None = None) -> Config:
+def load_config(path: str | None = None, host_home: str | None = None) -> Config:
     candidates: list[Path] = []
     if path:
         p = Path(path)
@@ -50,7 +46,12 @@ def load_config(path: str | None = None) -> Config:
             raise FileNotFoundError(f"Config file not found: {path}")
         candidates.append(p)
     candidates.append(Path("spawnbox.toml"))
-    candidates.append(DEFAULT_CONFIG_PATH)
+
+    if host_home:
+        xdg_cfg = Path(host_home) / ".config" / "spawnbox"
+    else:
+        xdg_cfg = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "spawnbox"
+    candidates.append(xdg_cfg / "spawnbox.toml")
 
     raw: dict | None = None
     for candidate in candidates:

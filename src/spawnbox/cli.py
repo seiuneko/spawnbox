@@ -42,8 +42,8 @@ def main() -> int:
     args = parse_args()
     setup_logging(args.verbose)
 
-    config = load_config(args.config)
     user, home = get_host_user()
+    config = load_config(args.config, host_home=home)
     project_dir = str(Path.cwd())
 
     command = args.command or (
