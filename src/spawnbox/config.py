@@ -82,35 +82,25 @@ def load_config(path: str | None = None) -> Config:
 def _parse_config(raw: dict) -> Config:
     cfg = Config()
 
-    cfg.machine = raw.get("machine", cfg.machine)
-    cfg.directory = raw.get("directory", cfg.directory)
-    cfg.default_command = raw.get("default_command", cfg.default_command)
+    for key in ("machine", "directory", "default_command"):
+        if key in raw:
+            setattr(cfg, key, raw[key])
 
-    if "exec" in raw:
-        e = raw["exec"]
-        cfg.exec_conf.boot = e.get("boot", cfg.exec_conf.boot)
-        cfg.exec_conf.ephemeral = e.get("ephemeral", cfg.exec_conf.ephemeral)
-        cfg.exec_conf.private_users = e.get("private_users", cfg.exec_conf.private_users)
+    sections: dict[str, tuple[object, tuple[str, ...]]] = {
+        "exec":             (cfg.exec_conf,     ("boot", "ephemeral", "private_users")),
+        "files":            (cfg.files_conf,    ("private_users_ownership",)),
+        "inaccessible":     (cfg.inaccessible,  ("paths", "units")),
+        "bind_read_only":   (cfg.bind_read_only, ("paths",)),
+        "bind":             (cfg.bind,          ("paths",)),
+        "gpg":              (cfg.gpg,           ("enabled",)),
+    }
 
-    if "files" in raw:
-        f = raw["files"]
-        cfg.files_conf.private_users_ownership = f.get(
-            "private_users_ownership", cfg.files_conf.private_users_ownership
-        )
-
-    if "inaccessible" in raw:
-        ia = raw["inaccessible"]
-        cfg.inaccessible.paths = ia.get("paths", [])
-        cfg.inaccessible.units = ia.get("units", [])
-
-    if "bind_read_only" in raw:
-        cfg.bind_read_only.paths = raw["bind_read_only"].get("paths", [])
-
-    if "bind" in raw:
-        cfg.bind.paths = raw["bind"].get("paths", [])
-
-    if "gpg" in raw:
-        g = raw["gpg"]
-        cfg.gpg.enabled = g.get("enabled", cfg.gpg.enabled)
+    for section_name, (target, keys) in sections.items():
+        if section_name not in raw:
+            continue
+        section_data = raw[section_name]
+        for key in keys:
+            if key in section_data:
+                setattr(target, key, section_data[key])
 
     return cfg
