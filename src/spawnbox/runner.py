@@ -43,7 +43,7 @@ class Runner:
             host_home,
             project_dir,
         )
-        nspawn_path = write_nspawn_file(self._machine, content)
+        nspawn_path = write_nspawn_file(self._machine, content, dry_run=self._dry_run)
         self._logger.debug("# --- %s ---", nspawn_path)
         for line in content.split("\n"):
             if line:

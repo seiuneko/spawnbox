@@ -132,9 +132,11 @@ def build_nspawn_content(
     return "\n".join(lines)
 
 
-def write_nspawn_file(machine: str, content: str) -> Path:
-    """写入 .nspawn 文件并注册清理。"""
+def write_nspawn_file(machine: str, content: str, *, dry_run: bool = False) -> Path:
+    """写入 .nspawn 文件并注册清理。dry_run 模式下不做任何实际 IO。"""
     nspawn_path = NSPAWN_DIR / f"{machine}.nspawn"
+    if dry_run:
+        return nspawn_path
     subprocess.run(["sudo", "mkdir", "-p", str(NSPAWN_DIR)], check=True)
     _sudo_write(nspawn_path, content)
     subprocess.run(["sudo", "chmod", "644", str(nspawn_path)], check=True)
