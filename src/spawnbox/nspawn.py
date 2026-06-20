@@ -192,8 +192,8 @@ def run_in_container(
         command = ["/bin/sh"]
     cmd = [
         "sudo", "systemd-run",
-        "--machine", machine,
-        "--uid", user,
+        "--machine", f"{user}@{machine}",
+        "--user",
         "--wait",
         "--pty",
         "--collect",
