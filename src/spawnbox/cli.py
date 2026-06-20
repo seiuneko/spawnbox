@@ -43,7 +43,7 @@ def main() -> int:
     setup_logging(args.verbose)
 
     config = load_config(args.config)
-    user, home = get_host_user(config.target_user or None)
+    user, home = get_host_user()
     project_dir = str(Path.cwd())
 
     command = args.command or (

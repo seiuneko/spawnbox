@@ -5,10 +5,14 @@ import pwd
 from pathlib import Path
 
 
-def get_host_user(target_user: str | None = None) -> tuple[str, str]:
-    if target_user:
-        pw = pwd.getpwnam(target_user)
-        return target_user, pw.pw_dir
+def get_host_user() -> tuple[str, str]:
+    sudo_user = os.environ.get("SUDO_USER")
+    if sudo_user:
+        sudo_home = os.environ.get("SUDO_HOME")
+        if sudo_home:
+            return sudo_user, sudo_home
+        pw = pwd.getpwnam(sudo_user)
+        return sudo_user, pw.pw_dir
     pw = pwd.getpwuid(os.getuid())
     return pw.pw_name, pw.pw_dir
 

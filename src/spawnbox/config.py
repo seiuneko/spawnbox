@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import os
-import pwd
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
+
+
+XDG_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "spawnbox"
+DEFAULT_CONFIG_PATH = XDG_CONFIG_DIR / "spawnbox.toml"
 
 
 @dataclass
@@ -33,23 +36,10 @@ class Config:
     machine: str = "spawnbox"
     directory: str = "/run/btrfs-root/pc711/@"
     default_command: str = "/usr/bin/opencode"
-    target_user: str = ""
     inaccessible: InaccessibleConfig = field(default_factory=InaccessibleConfig)
     bind_read_only: BindReadOnlyConfig = field(default_factory=BindReadOnlyConfig)
     bind: BindConfig = field(default_factory=BindConfig)
     gpg: GpgConfig = field(default_factory=GpgConfig)
-
-
-def _get_default_config_path() -> Path:
-    """获取默认配置路径。以 root 运行时通过 SUDO_USER 找到原始用户的配置。"""
-    xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
-    if xdg_config_home:
-        return Path(xdg_config_home) / "spawnbox" / "spawnbox.toml"
-    sudo_user = os.environ.get("SUDO_USER")
-    if sudo_user:
-        pw = pwd.getpwnam(sudo_user)
-        return Path(pw.pw_dir) / ".config" / "spawnbox" / "spawnbox.toml"
-    return Path.home() / ".config" / "spawnbox" / "spawnbox.toml"
 
 
 def load_config(path: str | None = None) -> Config:
@@ -60,7 +50,7 @@ def load_config(path: str | None = None) -> Config:
             raise FileNotFoundError(f"Config file not found: {path}")
         candidates.append(p)
     candidates.append(Path("spawnbox.toml"))
-    candidates.append(_get_default_config_path())
+    candidates.append(DEFAULT_CONFIG_PATH)
 
     raw: dict | None = None
     for candidate in candidates:
@@ -78,7 +68,7 @@ def load_config(path: str | None = None) -> Config:
 def _parse_config(raw: dict) -> Config:
     cfg = Config()
 
-    for key in ("machine", "directory", "default_command", "target_user"):
+    for key in ("machine", "directory", "default_command"):
         if key in raw:
             setattr(cfg, key, raw[key])
 
