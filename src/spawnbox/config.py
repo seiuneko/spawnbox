@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import os
+import pwd
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-
-
-XDG_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "spawnbox"
-DEFAULT_CONFIG_PATH = XDG_CONFIG_DIR / "spawnbox.toml"
 
 
 @dataclass
@@ -43,6 +40,18 @@ class Config:
     gpg: GpgConfig = field(default_factory=GpgConfig)
 
 
+def _get_default_config_path() -> Path:
+    """获取默认配置路径。以 root 运行时通过 SUDO_USER 找到原始用户的配置。"""
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
+    if xdg_config_home:
+        return Path(xdg_config_home) / "spawnbox" / "spawnbox.toml"
+    sudo_user = os.environ.get("SUDO_USER")
+    if sudo_user:
+        pw = pwd.getpwnam(sudo_user)
+        return Path(pw.pw_dir) / ".config" / "spawnbox" / "spawnbox.toml"
+    return Path.home() / ".config" / "spawnbox" / "spawnbox.toml"
+
+
 def load_config(path: str | None = None) -> Config:
     candidates: list[Path] = []
     if path:
@@ -51,7 +60,7 @@ def load_config(path: str | None = None) -> Config:
             raise FileNotFoundError(f"Config file not found: {path}")
         candidates.append(p)
     candidates.append(Path("spawnbox.toml"))
-    candidates.append(DEFAULT_CONFIG_PATH)
+    candidates.append(_get_default_config_path())
 
     raw: dict | None = None
     for candidate in candidates:
