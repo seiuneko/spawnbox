@@ -15,13 +15,12 @@ def get_host_user() -> tuple[str, str]:
 
 
 def resolve_unit(name: str) -> str:
+    available: set[str] = set()
     for wants_dir in Path("/etc/systemd/system").glob("*.wants"):
         unit_path = wants_dir / name
         if unit_path.exists():
             return str(unit_path.resolve())
-    available: set[str] = set()
-    for wd in Path("/etc/systemd/system").glob("*.wants"):
-        for p in wd.iterdir():
+        for p in wants_dir.iterdir():
             available.add(p.name)
     raise ValueError(
         f"Unit {name!r} not found in any /etc/systemd/system/*.wants/ directory.\n"
