@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# PKGBUILD
+*.pkg.tar.zst
+res/.SRCINFO

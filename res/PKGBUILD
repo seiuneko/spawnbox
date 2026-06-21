@@ -1,0 +1,31 @@
+# Maintainer: seiuneko <seiunekosl gmail>
+# Contributor: seiuneko <seiunekosl gmail>
+_pkgname=spawnbox
+pkgname=${_pkgname}-git
+pkgver=0.1.0.r0.g2470ffa
+pkgrel=1
+pkgdesc="systemd-nspawn wrapper optimized for LLM coding agents"
+arch=('any')
+url="https://github.com/seiuneko/spawnbox"
+license=('AGPL-3.0-or-later')
+depends=('python')
+makedepends=('git' 'python-installer' 'uv')
+provides=("${pkgname%-git}")
+conflicts=("${pkgname%-git}")
+source=("${_pkgname}::git+${url}")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+  git describe --long --tags --abbrev=7 | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  cd "${_pkgname}"
+  uv build
+}
+
+package() {
+  cd "${_pkgname}"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+}
