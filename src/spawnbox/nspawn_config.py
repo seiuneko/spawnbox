@@ -63,11 +63,12 @@ def _build_project_bind(project_dir: str, host_home: str) -> list[str]:
     return [f"Bind={host_dir}:{container_dir}:idmap"]
 
 
-def _build_gpg_section(config: Config, host_home: str) -> list[str]:
+def _build_gpg_section(host_user: str, host_home: str) -> list[str]:
     lines: list[str] = []
     result = subprocess.run(
         ["gpgconf", "--list-dir", "agent-extra-socket"],
         capture_output=True, text=True,
+        user=host_user,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -114,7 +115,7 @@ def build_nspawn_content(
     if project_dir:
         lines += _build_project_bind(project_dir, host_home)
     if config.gpg.enabled:
-        lines += _build_gpg_section(config, host_home)
+        lines += _build_gpg_section(host_user, host_home)
     lines.append("")
     return "\n".join(lines)
 
