@@ -3,6 +3,7 @@ from __future__ import annotations
 import shlex
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 from spawnbox.constants import (
@@ -11,6 +12,7 @@ from spawnbox.constants import (
     BOOT_TIMEOUT,
     SYSTEMD_PROPERTIES,
 )
+from spawnbox.util import get_host_user
 
 
 def run_systemd(
@@ -145,13 +147,27 @@ def enable_gpg_agent(
     dry_run: bool = False,
 ) -> None:
     """Enable the GPG agent forwarding service inside the container."""
-    run_systemd(
-        [
-            "systemd-run",
-            "--machine", machine,
-            "--wait", "--collect", "--quiet",
-            "systemctl", "--global", "enable", "spawnbox-gpg-agent.service",
-        ],
-        dry_run=dry_run,
-        check=True,
-    )
+    host_user, _ = get_host_user()
+    linger = Path(f"/var/lib/systemd/linger/{host_user}")
+
+    if linger.exists():
+        run_systemd(
+            [
+                "systemctl",
+                "--machine", f'{host_user}@{machine}',
+                "--user", "start",
+                "spawnbox-gpg-agent.service",
+            ],
+            dry_run=dry_run,
+        )
+    else:
+        run_systemd(
+            [
+                "systemctl",
+                "--machine", f'{host_user}@{machine}',
+                "--global", "enable",
+                "spawnbox-gpg-agent.service",
+            ],
+            dry_run=dry_run,
+            check=True,
+        )
