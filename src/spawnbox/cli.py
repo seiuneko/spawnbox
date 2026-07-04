@@ -30,6 +30,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=0,
         help="Verbose output (-v basic, -vv show generated .nspawn file)",
     )
+    parser.add_argument(
+        "--shell",
+        nargs="?",
+        const="root",
+        default=None,
+        metavar="USER",
+        help="Open interactive shell in the container (default: root)",
+    )
 
     args, remainder = parser.parse_known_args(argv)
     args.command = remainder or None
@@ -55,6 +63,9 @@ def main() -> int:
 
     workspace_name = Path(project_dir).name
     workspace_dir = f"{home}/workspace/{workspace_name}"
+
+    if args.shell:
+        return runner.shell(args.shell)
 
     return runner.run(command, workspace_dir)
 

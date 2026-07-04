@@ -126,6 +126,19 @@ def run_in_container(
     return run_systemd(cmd, dry_run=dry_run).returncode
 
 
+def shell_in_container(
+    machine: str,
+    user: str = "root",
+    *,
+    dry_run: bool = False,
+) -> int:
+    """Open an interactive shell inside the container."""
+    return run_systemd(
+        ["machinectl", "shell", f"{user}@{machine}"],
+        dry_run=dry_run,
+    ).returncode
+
+
 def enable_gpg_agent(
     machine: str,
     *,

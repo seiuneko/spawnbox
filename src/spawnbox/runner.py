@@ -11,6 +11,7 @@ from spawnbox.resolver import get_host_user
 from spawnbox.systemd import (
     enable_gpg_agent,
     run_in_container,
+    shell_in_container,
     start_container,
     stop_container,
     wait_for_container,
@@ -71,6 +72,30 @@ class Runner:
                 return 1
             self._maybe_enable_gpg()
             return self._execute(command, working_dir)
+        finally:
+            self._stop()
+
+    def shell(self, user: str = "root") -> int:
+        """启动容器并打开交互式 shell。"""
+        self._register_signal_handlers()
+
+        if self._dry_run:
+            print(f"# machine: {self._machine}")
+            print(f"# .nspawn: /run/systemd/nspawn/{self._machine}.nspawn")
+            print()
+
+        try:
+            self._start()
+            if not self._wait_for_boot():
+                self._logger.error(
+                    "container %s failed to start", self._machine
+                )
+                return 1
+            self._maybe_enable_gpg()
+            self._logger.info("opening shell (user=%s) ...", user)
+            return shell_in_container(
+                self._machine, user, dry_run=self._dry_run
+            )
         finally:
             self._stop()
 
