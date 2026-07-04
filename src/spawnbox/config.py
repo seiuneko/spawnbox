@@ -11,7 +11,12 @@ from spawnbox.util import get_host_user
 @dataclass
 class InaccessibleConfig:
     paths: list[str] = field(default_factory=list)
-    units: list[str] = field(default_factory=list)
+
+
+@dataclass
+class MaskSystemdUnitConfig:
+    enabled: bool = False
+    whitelist: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -38,6 +43,7 @@ class Config:
     bind_read_only: BindReadOnlyConfig = field(default_factory=BindReadOnlyConfig)
     bind: BindConfig = field(default_factory=BindConfig)
     gpg: GpgConfig = field(default_factory=GpgConfig)
+    mask_systemd_unit: MaskSystemdUnitConfig = field(default_factory=MaskSystemdUnitConfig)
 
 
 def load_config(path: str | None = None, host_home: str | None = None) -> Config:
@@ -77,10 +83,11 @@ def _parse_config(raw: dict) -> Config:
             setattr(cfg, key, raw[key])
 
     sections: dict[str, tuple[object, tuple[str, ...]]] = {
-        "inaccessible":     (cfg.inaccessible,  ("paths", "units")),
-        "bind_read_only":   (cfg.bind_read_only, ("paths",)),
-        "bind":             (cfg.bind,          ("paths",)),
-        "gpg":              (cfg.gpg,           ("enabled",)),
+        "inaccessible":       (cfg.inaccessible,       ("paths",)),
+        "mask_systemd_unit":  (cfg.mask_systemd_unit,  ("enabled", "whitelist")),
+        "bind_read_only":     (cfg.bind_read_only,     ("paths",)),
+        "bind":               (cfg.bind,               ("paths",)),
+        "gpg":                (cfg.gpg,                ("enabled",)),
     }
 
     for section_name, (target, keys) in sections.items():

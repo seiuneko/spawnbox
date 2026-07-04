@@ -10,18 +10,15 @@ from spawnbox.util import get_host_user, resolve_home_path
 _logger = logging.getLogger(__name__)
 
 
-def resolve_unit(name: str) -> str:
-    available: set[str] = set()
+def collect_mask_units(whitelist: list[str]) -> list[str]:
+    """Collect all unit files from /etc/systemd/system/*.wants/, skipping whitelisted names."""
+    skip = set(whitelist)
+    units: list[str] = []
     for wants_dir in Path("/etc/systemd/system").glob("*.wants"):
-        unit_path = wants_dir / name
-        if unit_path.exists():
-            return str(unit_path.resolve())
         for p in wants_dir.iterdir():
-            available.add(p.name)
-    raise ValueError(
-        f"Unit {name!r} not found in any /etc/systemd/system/*.wants/ directory.\n"
-        f"Available units: {', '.join(sorted(available))}"
-    )
+            if p.name not in skip:
+                units.append(str(p.resolve()))
+    return units
 
 
 def ensure_bind_parent_dirs(

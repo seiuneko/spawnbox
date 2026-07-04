@@ -6,7 +6,11 @@ from pathlib import Path
 
 from spawnbox.config import Config
 from spawnbox.constants import NSPAWN_DIR
-from spawnbox.resolver import expand_bind_path, resolve_home_path, resolve_unit
+from spawnbox.resolver import (
+    collect_mask_units,
+    expand_bind_path,
+    resolve_home_path,
+)
 
 _SERVICE_DIR = Path(__file__).parent / "resources"
 SERVICE_FILE = str(_SERVICE_DIR / "spawnbox-gpg-agent.service")
@@ -28,11 +32,11 @@ def _build_profile_section() -> list[str]:
 
 def _build_inaccessible_section(config: Config) -> list[str]:
     lines: list[str] = []
+    if config.mask_systemd_unit.enabled:
+        for unit in collect_mask_units(config.mask_systemd_unit.whitelist):
+            lines.append(f"Bind=/dev/null:{unit}")
     for path in config.inaccessible.paths:
-        lines.append(f"Inaccessible={path}")
-    for unit in config.inaccessible.units:
-        resolved = resolve_unit(unit)
-        lines.append(f"Inaccessible={resolved}")
+        lines.append(f"Bind=/dev/null:{path}")
     return lines
 
 
