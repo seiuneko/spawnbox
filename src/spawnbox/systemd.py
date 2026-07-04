@@ -42,6 +42,8 @@ def start_container(
             "--unit", machine,
             *properties,
             "--quiet", "--collect",
+            "--property=StandardOutput=null",
+            "--property=StandardError=null",
             "systemd-nspawn",
             "--quiet", "--boot",
             f"--directory={directory}",
