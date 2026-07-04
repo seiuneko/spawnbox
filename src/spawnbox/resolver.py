@@ -1,20 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
-import pwd
 from pathlib import Path
 
+from spawnbox.config import Config
+from spawnbox.util import get_host_user, resolve_home_path
 
-def get_host_user() -> tuple[str, str]:
-    sudo_user = os.environ.get("SUDO_USER")
-    if sudo_user:
-        sudo_home = os.environ.get("SUDO_HOME")
-        if sudo_home:
-            return sudo_user, sudo_home
-        pw = pwd.getpwnam(sudo_user)
-        return sudo_user, pw.pw_dir
-    pw = pwd.getpwuid(os.getuid())
-    return pw.pw_name, pw.pw_dir
+_logger = logging.getLogger(__name__)
 
 
 def resolve_unit(name: str) -> str:
@@ -31,21 +24,37 @@ def resolve_unit(name: str) -> str:
     )
 
 
+def ensure_bind_parent_dirs(
+    config: Config, host_home: str, host_uid: int, host_gid: int,
+) -> None:
+    """Ensure parent dirs of all ~ bind-mount sources exist with correct ownership."""
+    paths = list(config.bind.paths) + list(config.bind_read_only.paths)
+    if config.gpg.enabled:
+        paths += [
+            "~/.gnupg/S.gpg-agent.host",
+            "~/.config/git",
+            "~/.gnupg/pubring.kbx",
+        ]
+    seen: set[Path] = set()
+    for raw in paths:
+        source = raw.split(":", 1)[0] if ":" in raw else raw
+        source = resolve_home_path(source, host_home)
+        parent = (Path(config.directory) / source.lstrip('/')).parent
+        _logger.info("creating %s (uid=%d, gid=%d)", parent, host_uid, host_gid)
+        if parent in seen:
+            continue
+        seen.add(parent)
+        parent.mkdir(parents=True, exist_ok=True)
+        os.chown(parent, host_uid, host_gid)
+
+
 def expand_bind_path(raw: str, host_home: str = "") -> str:
     if ":" in raw:
         source, dest = raw.split(":", 1)
     else:
         source = dest = raw
-    if host_home:
-        if source.startswith("~/"):
-            source = host_home + source[1:]
-        elif source == "~":
-            source = host_home
-        if dest.startswith("~/"):
-            dest = host_home + dest[1:]
-        elif dest == "~":
-            dest = host_home
-    else:
-        source = str(Path(source).expanduser())
-        dest = str(Path(dest).expanduser())
+    if not host_home:
+        host_home = get_host_user()[1]
+    source = resolve_home_path(source, host_home)
+    dest = resolve_home_path(dest, host_home)
     return f"{source}:{dest}:idmap"

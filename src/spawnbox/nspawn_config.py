@@ -6,7 +6,7 @@ from pathlib import Path
 
 from spawnbox.config import Config
 from spawnbox.constants import NSPAWN_DIR
-from spawnbox.resolver import expand_bind_path, resolve_unit
+from spawnbox.resolver import expand_bind_path, resolve_home_path, resolve_unit
 
 _SERVICE_DIR = Path(__file__).parent / "resources"
 SERVICE_FILE = str(_SERVICE_DIR / "spawnbox-gpg-agent.service")
@@ -53,7 +53,7 @@ def _build_bind_section(config: Config, host_home: str = "") -> list[str]:
 
 
 def _build_project_bind(project_dir: str, host_home: str) -> list[str]:
-    host_dir = str(Path(project_dir).expanduser().resolve())
+    host_dir = str(Path(resolve_home_path(project_dir, host_home)).resolve())
     workspace_name = Path(host_dir).name
     container_dir = f"{host_home}/workspace/{workspace_name}"
     return [f"Bind={host_dir}:{container_dir}:idmap"]

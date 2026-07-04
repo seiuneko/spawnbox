@@ -5,6 +5,8 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from spawnbox.util import get_host_user
+
 
 @dataclass
 class InaccessibleConfig:
@@ -50,7 +52,8 @@ def load_config(path: str | None = None, host_home: str | None = None) -> Config
     if host_home:
         xdg_cfg = Path(host_home) / ".config" / "spawnbox"
     else:
-        xdg_cfg = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "spawnbox"
+        home = get_host_user()[1]
+        xdg_cfg = Path(os.environ.get("XDG_CONFIG_HOME", Path(home) / ".config")) / "spawnbox"
     candidates.append(xdg_cfg / "spawnbox.toml")
 
     raw: dict | None = None

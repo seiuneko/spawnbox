@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import logging
 import os
+import pwd
 import signal
 import sys
 
 from spawnbox.config import Config
 from spawnbox.nspawn_config import build_nspawn_content, write_nspawn_file
-from spawnbox.resolver import get_host_user
+from spawnbox.resolver import ensure_bind_parent_dirs, get_host_user
 from spawnbox.systemd import (
     enable_gpg_agent,
     run_in_container,
@@ -38,6 +39,9 @@ class Runner:
         host_home: str,
     ) -> None:
         """生成 .nspawn 文件。"""
+        uid = pwd.getpwnam(host_user).pw_uid
+        ensure_bind_parent_dirs(self._config, host_home, uid, uid)
+
         content = build_nspawn_content(
             self._config,
             host_user,
