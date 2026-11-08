@@ -32,6 +32,7 @@ class BindConfig:
 @dataclass
 class GpgConfig:
     enabled: bool = False
+    ssh: bool = False
 
 
 @dataclass
@@ -87,7 +88,7 @@ def _parse_config(raw: dict) -> Config:
         "mask_systemd_unit":  (cfg.mask_systemd_unit,  ("enabled", "whitelist")),
         "bind_read_only":     (cfg.bind_read_only,     ("paths",)),
         "bind":               (cfg.bind,               ("paths",)),
-        "gpg":                (cfg.gpg,                ("enabled",)),
+        "gpg":                (cfg.gpg,                ("enabled", "ssh")),
     }
 
     for section_name, (target, keys) in sections.items():

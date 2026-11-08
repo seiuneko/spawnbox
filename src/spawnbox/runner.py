@@ -131,7 +131,11 @@ class Runner:
         if not self._config.gpg.enabled:
             return
         self._logger.info("enabling GPG agent forwarding ...")
-        enable_gpg_agent(self._machine, dry_run=self._dry_run)
+        enable_gpg_agent(
+            self._machine,
+            ssh=self._config.gpg.ssh,
+            dry_run=self._dry_run,
+        )
 
     def _execute(
         self,

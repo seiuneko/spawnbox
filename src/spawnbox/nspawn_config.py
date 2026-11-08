@@ -63,10 +63,9 @@ def _build_project_bind(project_dir: str, host_home: str) -> list[str]:
     return [f"Bind={host_dir}:{container_dir}:idmap"]
 
 
-def _build_gpg_section(host_user: str, host_home: str) -> list[str]:
-    lines: list[str] = []
+def _gpgconf_socket(host_user: str, name: str) -> str:
     result = subprocess.run(
-        ["gpgconf", "--list-dir", "agent-extra-socket"],
+        ["gpgconf", "--list-dir", name],
         capture_output=True, text=True,
         user=host_user,
     )
@@ -74,18 +73,28 @@ def _build_gpg_section(host_user: str, host_home: str) -> list[str]:
         raise RuntimeError(
             "gpgconf not found; install gnupg or disable [gpg] in config"
         )
-    host_extra_socket = result.stdout.strip()
-    if not host_extra_socket:
+    path = result.stdout.strip()
+    if not path:
         raise RuntimeError(
-            "gpgconf --list-dir agent-extra-socket returned empty; "
+            f"gpgconf --list-dir {name} returned empty; "
             "is gpg-agent running?"
         )
+    return path
 
-    processed = expand_bind_path(
-        f"{host_extra_socket}:~/.gnupg/S.gpg-agent.host",
-        host_home=host_home,
-    )
-    lines.append(f"Bind={processed}")
+
+def _build_gpg_section(config: Config, host_user: str, host_home: str) -> list[str]:
+    lines: list[str] = []
+    sockets = [("agent-extra-socket", "~/.gnupg/S.gpg-agent.host")]
+    if config.gpg.ssh:
+        sockets.append(("agent-ssh-socket", "~/.gnupg/S.gpg-agent-ssh.host"))
+
+    for name, dest in sockets:
+        host_socket = _gpgconf_socket(host_user, name)
+        processed = expand_bind_path(
+            f"{host_socket}:{dest}",
+            host_home=host_home,
+        )
+        lines.append(f"Bind={processed}")
 
     for path in ["~/.config/git", "~/.gnupg/pubring.kbx"]:
         processed = expand_bind_path(path, host_home=host_home)
@@ -115,7 +124,7 @@ def build_nspawn_content(
     if project_dir:
         lines += _build_project_bind(project_dir, host_home)
     if config.gpg.enabled:
-        lines += _build_gpg_section(host_user, host_home)
+        lines += _build_gpg_section(config, host_user, host_home)
     lines.append("")
     return "\n".join(lines)
 

@@ -32,6 +32,8 @@ def ensure_bind_parent_dirs(
             "~/.config/git",
             "~/.gnupg/pubring.kbx",
         ]
+        if config.gpg.ssh:
+            paths.append("~/.gnupg/S.gpg-agent-ssh.host")
     seen: set[Path] = set()
     for raw in paths:
         source = raw.split(":", 1)[0] if ":" in raw else raw

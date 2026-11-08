@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pwd
 import shlex
 import subprocess
 import time
@@ -146,6 +147,7 @@ def shell_in_container(
 def enable_gpg_agent(
     machine: str,
     *,
+    ssh: bool = False,
     dry_run: bool = False,
 ) -> None:
     """Enable the GPG agent forwarding service inside the container."""
@@ -172,4 +174,16 @@ def enable_gpg_agent(
             ],
             dry_run=dry_run,
             check=True,
+        )
+
+    if ssh:
+        uid = pwd.getpwnam(host_user).pw_uid
+        run_systemd(
+            [
+                "systemctl",
+                "--machine", f'{host_user}@{machine}',
+                "--user", "set-environment",
+                f"SSH_AUTH_SOCK=/run/user/{uid}/gnupg/S.gpg-agent.ssh",
+            ],
+            dry_run=dry_run,
         )

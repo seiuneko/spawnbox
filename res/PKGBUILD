@@ -2,7 +2,7 @@
 # Contributor: seiuneko <seiunekosl gmail>
 _pkgname=spawnbox
 pkgname=${_pkgname}-git
-pkgver=0.1.0.r0.g2470ffa
+pkgver=0.1.0.r8.g9e0c498
 pkgrel=1
 pkgdesc="systemd-nspawn wrapper optimized for LLM coding agents"
 arch=('any')
